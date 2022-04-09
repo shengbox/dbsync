@@ -2,9 +2,10 @@ package dbsync
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 // 插入数据时的配置信息
@@ -75,7 +76,7 @@ func convertUpdateType(data interface{}, columnType string) interface{} {
 	switch columnType {
 	case "time":
 		if data != nil {
-			return time.Unix(int64(data.(float64)), 0)
+			return time.Unix(data.(int64), 0)
 		} else {
 			return nil
 		}
