@@ -1,10 +1,10 @@
 package dbsync
 
 import (
-	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 // 获取增量数据时的配置信息
@@ -33,10 +33,10 @@ func DoFetch(db gorm.SQLCommon, tableName string, options FetchOptions) (rsp Fet
 		}
 	}()
 	// 参数处理
-	if options.UpdateTimeFieldName == "" {
-		err = errors.New("options.UpdateTimeFieldName must be not nil")
-		return
-	}
+	// if options.UpdateTimeFieldName == "" {
+	// 	err = errors.New("options.UpdateTimeFieldName must be not nil")
+	// 	return
+	// }
 	if options.PageNumber <= 0 {
 		options.PageNumber = 1
 	}
@@ -44,18 +44,28 @@ func DoFetch(db gorm.SQLCommon, tableName string, options FetchOptions) (rsp Fet
 		options.PageSize = 100
 	}
 	// 拼接SQL语句
-	whereStmt := fmt.Sprintf("%s > ?", options.UpdateTimeFieldName)
-	whereArgs := []interface{}{time.Unix(options.LastUpdateTime, 0)}
+	whereStmt := "1 = 1 "
+	whereArgs := []interface{}{}
+	var orderStmt string
+	// UpdateTimeFieldName为空则全量同步
+	if options.UpdateTimeFieldName != "" {
+		whereStmt = fmt.Sprintf("%s AND (%s > ?)", whereStmt, options.UpdateTimeFieldName)
+		whereArgs = append(whereArgs, time.Unix(options.LastUpdateTime, 0))
+		orderStmt = fmt.Sprintf("ORDER BY %s ASC", options.UpdateTimeFieldName)
+	}
+	// whereStmt := fmt.Sprintf("%s > ?", options.UpdateTimeFieldName)
+	// whereArgs := []interface{}{time.Unix(options.LastUpdateTime, 0)}
 	if options.WhereSqlStmt != "" {
 		whereStmt = fmt.Sprintf("%s AND (%s)", whereStmt, options.WhereSqlStmt)
 		whereArgs = append(whereArgs, options.WhereSqlArgs...)
 	}
 	offset, size := (options.PageNumber-1)*options.PageSize, options.PageSize
-	sqlStmt := fmt.Sprintf("SELECT * FROM %s WHERE %s ORDER BY %s ASC LIMIT %d OFFSET %d",
-		tableName, whereStmt, options.UpdateTimeFieldName, size, offset)
+	sqlStmt := fmt.Sprintf("SELECT * FROM %s WHERE %s %s LIMIT %d OFFSET %d",
+		tableName, whereStmt, orderStmt, size, offset)
 	// 执行查询语句
 	rows, err := db.Query(sqlStmt, whereArgs...)
 	if err != nil {
+		fmt.Println(sqlStmt, whereArgs)
 		return
 	}
 	// 处理结果集的有效列
